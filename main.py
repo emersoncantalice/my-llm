@@ -25,23 +25,37 @@ def _download_models_on_startup() -> None:
     force_download = _to_bool(os.getenv("FORCE_DOWNLOAD_ON_STARTUP", "0"))
 
     print(f"[startup] Download de modelos habilitado. local_dir={model_home}")
-    print(f"[startup] Baixando/verificando modelo base: {base_model}")
-    snapshot_download(
-        repo_id=base_model,
-        local_dir=str(base_local_dir),
-        local_dir_use_symlinks=False,
-        force_download=force_download,
-    )
-    print(f"[startup] Baixando/verificando modelo de embeddings: {embedding_model}")
-    snapshot_download(
-        repo_id=embedding_model,
-        local_dir=str(emb_local_dir),
-        local_dir_use_symlinks=False,
-        force_download=force_download,
-    )
-    os.environ["BASE_MODEL"] = str(base_local_dir)
-    os.environ["EMBEDDING_MODEL"] = str(emb_local_dir)
-    print("[startup] Modelos prontos no cache local.")
+    try:
+        print(f"[startup] Baixando/verificando modelo base: {base_model}")
+        snapshot_download(
+            repo_id=base_model,
+            local_dir=str(base_local_dir),
+            local_dir_use_symlinks=False,
+            force_download=force_download,
+        )
+        print(f"[startup] Baixando/verificando modelo de embeddings: {embedding_model}")
+        snapshot_download(
+            repo_id=embedding_model,
+            local_dir=str(emb_local_dir),
+            local_dir_use_symlinks=False,
+            force_download=force_download,
+        )
+        os.environ["BASE_MODEL"] = str(base_local_dir)
+        os.environ["EMBEDDING_MODEL"] = str(emb_local_dir)
+        print("[startup] Modelos prontos no cache local.")
+    except Exception as exc:
+        base_config = base_local_dir / "config.json"
+        emb_config = emb_local_dir / "config.json"
+        if base_config.exists() and emb_config.exists():
+            os.environ["BASE_MODEL"] = str(base_local_dir)
+            os.environ["EMBEDDING_MODEL"] = str(emb_local_dir)
+            print(f"[startup] Download falhou ({exc}), usando cache local existente.")
+            return
+        raise RuntimeError(
+            "Falha ao baixar modelos no startup e nao ha cache local pronto. "
+            "Verifique conectividade para huggingface.co, DNS/egress no Railway, "
+            "ou preencha o volume /data com os modelos."
+        ) from exc
 
 def _prefer_local_models_if_available() -> None:
     model_home = Path(os.getenv("LOCAL_MODELS_DIR", "data/models"))
@@ -69,12 +83,12 @@ if __name__ == "__main__":
     os.environ.setdefault("HF_DATASETS_CACHE", str(cache_root / "datasets"))
     offline_mode = os.getenv("OFFLINE_MODE", "1") == "1"
     if offline_mode:
-        os.environ.setdefault("HF_HUB_OFFLINE", "1")
-        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        os.environ["HF_HUB_OFFLINE"] = "1"
+        os.environ["TRANSFORMERS_OFFLINE"] = "1"
         _prefer_local_models_if_available()
     else:
-        os.environ.setdefault("HF_HUB_OFFLINE", "0")
-        os.environ.setdefault("TRANSFORMERS_OFFLINE", "0")
+        os.environ["HF_HUB_OFFLINE"] = "0"
+        os.environ["TRANSFORMERS_OFFLINE"] = "0"
         _prefer_local_models_if_available()
 
     if not offline_mode and _to_bool(os.getenv("DOWNLOAD_MODELS_ON_STARTUP", "1"), default=True):
