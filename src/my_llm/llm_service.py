@@ -49,6 +49,22 @@ class LLMService:
         "defina",
         "explique",
         "sobre",
+        "seu",
+        "sua",
+        "seus",
+        "suas",
+        "meu",
+        "minha",
+        "meus",
+        "minhas",
+        "ola",
+        "olá",
+        "oi",
+        "bom",
+        "boa",
+        "dia",
+        "tarde",
+        "noite",
     }
 
     def __init__(self) -> None:
@@ -199,7 +215,13 @@ class LLMService:
                 best_score = score
                 best_output = output
 
-        if best_output and best_score >= settings.finetune_fallback_threshold:
+        effective_threshold = settings.finetune_fallback_threshold
+        if len(self.finetune_examples) <= 2:
+            effective_threshold = min(effective_threshold, 0.30)
+        elif len(self.finetune_examples) <= 5:
+            effective_threshold = min(effective_threshold, 0.35)
+
+        if best_output and best_score >= effective_threshold:
             return best_output
         return None
 

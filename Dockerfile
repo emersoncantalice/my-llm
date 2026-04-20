@@ -17,7 +17,11 @@ RUN python -m pip install --upgrade pip && \
 
 COPY . .
 
-RUN chmod +x /app/start.sh
+# Normalize UTF-8 BOM and line endings (CRLF -> LF) in shell entrypoint
+# to avoid "exec format error" when image is built from Windows workspaces.
+RUN sed -i '1s/^\xEF\xBB\xBF//' /app/start.sh && \
+    sed -i 's/\r$//' /app/start.sh && \
+    chmod +x /app/start.sh
 
 EXPOSE 7860
 
