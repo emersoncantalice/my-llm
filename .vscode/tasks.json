@@ -1,0 +1,23 @@
+﻿{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Subir My LLM",
+      "type": "shell",
+      "command": "if (!(Test-Path .venv\\Scripts\\python.exe)) { python -m venv .venv }; .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt; $env:PYTHONPATH='src'; .\\.venv\\Scripts\\python.exe main.py",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "args": [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command"
+          ]
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
+}

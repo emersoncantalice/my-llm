@@ -1,0 +1,12 @@
+﻿.git
+.gitignore
+.venv
+.vscode
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.gradio.out.log
+.gradio.err.log
+.hf-cache
+.env

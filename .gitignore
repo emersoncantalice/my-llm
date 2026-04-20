@@ -1,0 +1,11 @@
+﻿__pycache__/
+*.pyc
+.venv/
+.env
+.gradio*.log
+data/contexts/faiss.index
+data/contexts/chunks.json
+data/finetune/adapters/
+data/hf-cache/
+data/models/
+/data/
