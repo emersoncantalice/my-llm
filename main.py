@@ -10,13 +10,22 @@ def _to_bool(value: str | None, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _base_cache_ready(base_local_dir: Path) -> bool:
+    return (base_local_dir / "config.json").exists()
+
+
+def _embedding_cache_ready(emb_local_dir: Path) -> bool:
+    # sentence-transformers cache is considered ready when both files exist.
+    return (emb_local_dir / "config.json").exists() and (emb_local_dir / "modules.json").exists()
+
+
 def _download_models_on_startup() -> None:
     # Baixa (ou valida cache) dos modelos no boot para evitar erro no primeiro uso.
     # Em Windows sem privilegio de symlink, usamos pasta local materializada.
     from huggingface_hub import snapshot_download
 
-    base_model = os.getenv("BASE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
-    embedding_model = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    base_model = os.getenv("BASE_MODEL_REPO_ID", "Qwen/Qwen2.5-0.5B-Instruct")
+    embedding_model = os.getenv("EMBEDDING_MODEL_REPO_ID", "sentence-transformers/all-MiniLM-L6-v2")
     model_home = Path(os.getenv("LOCAL_MODELS_DIR", "data/models"))
     base_local_dir = Path(os.getenv("BASE_MODEL_LOCAL_DIR", str(model_home / "base-model")))
     emb_local_dir = Path(os.getenv("EMBEDDING_MODEL_LOCAL_DIR", str(model_home / "embedding-model")))
@@ -30,23 +39,19 @@ def _download_models_on_startup() -> None:
         snapshot_download(
             repo_id=base_model,
             local_dir=str(base_local_dir),
-            local_dir_use_symlinks=False,
             force_download=force_download,
         )
         print(f"[startup] Baixando/verificando modelo de embeddings: {embedding_model}")
         snapshot_download(
             repo_id=embedding_model,
             local_dir=str(emb_local_dir),
-            local_dir_use_symlinks=False,
             force_download=force_download,
         )
         os.environ["BASE_MODEL"] = str(base_local_dir)
         os.environ["EMBEDDING_MODEL"] = str(emb_local_dir)
         print("[startup] Modelos prontos no cache local.")
     except Exception as exc:
-        base_config = base_local_dir / "config.json"
-        emb_config = emb_local_dir / "config.json"
-        if base_config.exists() and emb_config.exists():
+        if _base_cache_ready(base_local_dir) and _embedding_cache_ready(emb_local_dir):
             os.environ["BASE_MODEL"] = str(base_local_dir)
             os.environ["EMBEDDING_MODEL"] = str(emb_local_dir)
             print(f"[startup] Download falhou ({exc}), usando cache local existente.")
@@ -62,18 +67,22 @@ def _prefer_local_models_if_available() -> None:
     base_local_dir = Path(os.getenv("BASE_MODEL_LOCAL_DIR", str(model_home / "base-model")))
     emb_local_dir = Path(os.getenv("EMBEDDING_MODEL_LOCAL_DIR", str(model_home / "embedding-model")))
 
-    base_config = base_local_dir / "config.json"
-    emb_config = emb_local_dir / "config.json"
-    if base_config.exists():
+    if _base_cache_ready(base_local_dir):
         os.environ["BASE_MODEL"] = str(base_local_dir)
         print(f"[startup] BASE_MODEL local detectado: {base_local_dir}")
-    if emb_config.exists():
+    if _embedding_cache_ready(emb_local_dir):
         os.environ["EMBEDDING_MODEL"] = str(emb_local_dir)
         print(f"[startup] EMBEDDING_MODEL local detectado: {emb_local_dir}")
 
 
 if __name__ == "__main__":
     load_dotenv()
+
+    os.environ.setdefault("BASE_MODEL_REPO_ID", os.getenv("BASE_MODEL", "Qwen/Qwen2.5-0.5B-Instruct"))
+    os.environ.setdefault(
+        "EMBEDDING_MODEL_REPO_ID",
+        os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
+    )
 
     cache_root = Path(os.getenv("HF_HOME", "data/hf-cache"))
     cache_root.mkdir(parents=True, exist_ok=True)
