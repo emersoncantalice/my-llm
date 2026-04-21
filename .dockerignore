@@ -1,4 +1,4 @@
-﻿.git
+.git
 .gitignore
 .venv
 .vscode
@@ -10,3 +10,9 @@ __pycache__
 .gradio.err.log
 .hf-cache
 .env
+data
+app/data
+*.safetensors
+*.bin
+*.onnx
+*.arrow

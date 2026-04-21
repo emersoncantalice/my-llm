@@ -33,6 +33,30 @@ def _download_models_on_startup() -> None:
     emb_local_dir.mkdir(parents=True, exist_ok=True)
     force_download = _to_bool(os.getenv("FORCE_DOWNLOAD_ON_STARTUP", "0"))
 
+    # Keep download footprint small on constrained volumes (Railway).
+    base_ignore_patterns = [
+        "onnx/*",
+        "openvino/*",
+        "*.onnx",
+        "*.xml",
+        "*.h5",
+        "*.msgpack",
+        "flax_model.msgpack",
+        "rust_model.ot",
+        "tf_model.h5",
+    ]
+    embedding_ignore_patterns = [
+        "onnx/*",
+        "openvino/*",
+        "*.onnx",
+        "*.xml",
+        "*.h5",
+        "*.msgpack",
+        "flax_model.msgpack",
+        "rust_model.ot",
+        "tf_model.h5",
+    ]
+
     print(f"[startup] Download de modelos habilitado. local_dir={model_home}")
     try:
         print(f"[startup] Baixando/verificando modelo base: {base_model}")
@@ -40,12 +64,14 @@ def _download_models_on_startup() -> None:
             repo_id=base_model,
             local_dir=str(base_local_dir),
             force_download=force_download,
+            ignore_patterns=base_ignore_patterns,
         )
         print(f"[startup] Baixando/verificando modelo de embeddings: {embedding_model}")
         snapshot_download(
             repo_id=embedding_model,
             local_dir=str(emb_local_dir),
             force_download=force_download,
+            ignore_patterns=embedding_ignore_patterns,
         )
         os.environ["BASE_MODEL"] = str(base_local_dir)
         os.environ["EMBEDDING_MODEL"] = str(emb_local_dir)
